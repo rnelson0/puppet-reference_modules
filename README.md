@@ -110,6 +110,59 @@ end
 
 ```
 
+#### Testing that a ruby method is called with the proper arguments
+
+This assumes you are testing ruby code, not puppet code.
+
+Code under test:
+```ruby
+Puppet::Functions.create_function(:eciton) do
+  dispatch :eciton do
+    param 'String', :some_string
+  end
+
+  def eciton(some_string)
+    Puppet.notice(some_string.reverse)
+  end
+end
+```
+
+To test that the correct string is being set to `notice`...
+
+In your `spec_helper`:
+```ruby
+RSpec.configure do |c|
+  c.mock_with :rspec
+end
+```
+
+In your test code:
+```
+require 'spec_helper'
+
+describe 'eciton' do
+  it {
+    expect(Puppet).to receive(:notice).with('gnitset')
+    is_expected.to run.with_params('testing')
+  }
+end
+```
+
+For details about the `expect`...`receive` pattern, see the [RSpec Mocks documentation](https://relishapp.com/rspec/rspec-mocks/docs).
+
+*Warning* - You can use this pattern to test that a method is called on one of your function's parameters, but doing that will result in warning messages due to the way rspec passes the parameters to the function:
+
+```
+  it {
+    param = 'testing'
+    expect(param).to receive(:reverse).and_call_original
+    is_expected.to run.with_params(param)
+  }
+```
+This will display the following warning during the rspec run:
+```
+WARNING: rspec-mocks was unable to restore the original `reverse` method on "testing" because it has been frozen.  If you reuse this object, `reverse` will continue to respond with its stub implementation. Warning generated from spec at `./spec/functions/eciton_spec.rb:9`.
+```
 #### Including dependent classes
 * [puppetlabs/apache's defined type apache::vhost](https://github.com/puppetlabs/puppetlabs-apache/blob/5d2e65ed3df9d39fb7d99b5948584035f8b662c3/spec/defines/vhost_spec.rb#L4-L6) requires the class `apache` to be included as well, via `let :pre_condition do .. end`
 
